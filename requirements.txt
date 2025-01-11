@@ -1,0 +1,2 @@
+git+https://github.com/RichardHightower/rag.git@main#egg=vector-rag
+streamlit>=1.29.0

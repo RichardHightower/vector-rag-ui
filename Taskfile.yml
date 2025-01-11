@@ -1,0 +1,56 @@
+version: '3'
+
+tasks:
+
+  generate:reqs:
+    desc: Generate requirements files
+    cmds:
+      - echo "git+https://github.com/RichardHightower/rag.git@main#egg=vector-rag" > requirements.txt
+      - |
+        cat << EOF > requirements.dev.txt
+        -r requirements.txt
+        black>=24.1.0,<25.0.0
+        isort>=5.13.0,<6.0.0
+        mypy>=1.8.0,<2.0.0
+        pytest>=8.0.0,<9.0.0
+        pytest-cov>=4.1.0,<5.0.0
+        EOF
+
+  setup:
+    desc: Set up development environment
+    deps: [generate:reqs]
+    cmds:
+      - python -m venv .venv
+      - pip install -r requirements.txt
+
+  db:up:
+    desc: Start the database
+    cmds:
+      - docker-compose up -d
+
+  db:down:
+    desc: Stop the database
+    cmds:
+      - docker-compose down
+
+  run:example:
+    desc: Run the example script
+    cmds:
+      - python src/example.py
+
+  run:app:
+    desc: Run the Streamlit application
+    cmds:
+      - streamlit run src/app.py
+
+  clean:
+    desc: Clean up generated files and virtualenv
+    cmds:
+      - rm -rf .venv
+      - rm -f requirements.txt requirements.dev.txt
+
+  reset:
+    desc: Clean and setup again
+    deps: [clean]
+    cmds:
+      - task: setup
