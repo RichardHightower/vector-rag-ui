@@ -1,5 +1,5 @@
 import streamlit as st
-from rag.chunking import LineChunker
+from rag.chunking import LineChunker, WordChunker, SizeChunker, debug_chunker
 from rag.db import DBFileHandler
 from rag.model import File
 from rag.embeddings import OpenAIEmbedder
@@ -28,9 +28,18 @@ class ProjectManager:
     @st.cache_resource
     def _init_handler():
 
-        CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', 25))
-        CHUNK_OVERLAP = int(os.getenv('CHUNK_OVERLAP', 3))
+        # CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', 25))
+        # CHUNK_OVERLAP = int(os.getenv('CHUNK_OVERLAP', 3))
+        #
+        CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', 255))
+        CHUNK_OVERLAP = int(os.getenv('CHUNK_OVERLAP', 25))
+        word_chunker = WordChunker(CHUNK_SIZE, CHUNK_OVERLAP)
         line_chunker = LineChunker(CHUNK_SIZE, CHUNK_OVERLAP)
+
+        size_chunker = SizeChunker(CHUNK_SIZE, CHUNK_OVERLAP)
+
+        chunker = size_chunker
+
         # Construct database URL using environment variables
         db_url = f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DB')}"
 
@@ -48,7 +57,7 @@ class ProjectManager:
             
         # call db initializer which does not exist yet
         # then run this return DBFileHandler(db_url=db_url, embedder=OpenAIEmbedder(api_key=api_key))
-        return DBFileHandler(embedder=OpenAIEmbedder(api_key=api_key), chunker=line_chunker)
+        return DBFileHandler(embedder=OpenAIEmbedder(api_key=api_key), chunker=chunker)
 
     def create_project(self, name: str, description: Optional[str] = None):
         if name:
@@ -70,6 +79,14 @@ class ProjectManager:
             tmp_file.write(content)
             tmp_file_path = tmp_file.name
 
+        CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', 255))
+        CHUNK_OVERLAP = int(os.getenv('CHUNK_OVERLAP', 25))
+
+
+        size_chunker = SizeChunker(CHUNK_SIZE, CHUNK_OVERLAP)
+
+
+
         try:
             file = File(
                 name=uploaded_file.name,
@@ -78,7 +95,9 @@ class ProjectManager:
                 crc=hashlib.md5(content).hexdigest(),
                 meta_data={"type": uploaded_file.type}
             )
-            
+            logger.debug(f"Adding file: {file.name} to project: {project_id}")
+            debug_chunker(size_chunker, file)
+            logger.debug(f"Debug Chunk done. Chunking file: {file.name}")
             result = self.handler.add_file(project_id, file)
             if result:
                 logger.debug(f"Successfully added file: {result.name}")

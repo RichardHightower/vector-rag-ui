@@ -54,3 +54,9 @@ tasks:
     deps: [clean]
     cmds:
       - task: setup
+
+  update:rag:
+    desc: Update vector-rag package to latest version
+    cmds:
+      - pip uninstall -y vector-rag
+      - pip install --no-cache-dir git+https://github.com/RichardHightower/rag.git@main#egg=vector-rag
