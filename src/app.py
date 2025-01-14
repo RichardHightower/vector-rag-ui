@@ -257,6 +257,10 @@ class UI:
                 st.text(chunk_result.chunk.content)
                 st.write(f"Chunk Index: {chunk_result.chunk.index}")
                 st.write(f"Chunk Size: {chunk_result.chunk.size} characters")
+                if chunk_result.chunk.meta_data:
+                    st.write("Metadata:")
+                    for key, value in chunk_result.chunk.meta_data.items():
+                        st.write(f"- {key}: {value}")
 
     def render_project_selection(self):
         st.header("Projects")
