@@ -1,11 +1,15 @@
-from rag.db import DBFileHandler
-from rag.embeddings import OpenAIEmbedder
-from rag.model import File
+from vector_rag.config import Config
+from vector_rag.db import DBFileHandler
+from vector_rag.embeddings import OpenAIEmbedder
+from vector_rag.model import File
 
 
 def main():
+
+    config = Config()
+    print(config.DB_URL)
     # Initialize the handler with a mock embedder for testing
-    handler = DBFileHandler(embedder=OpenAIEmbedder())
+    handler = DBFileHandler(config, embedder=OpenAIEmbedder(config))
 
     # Create a new project
     project = handler.get_or_create_project("My RAG Project", "Testing RAG system integration")
@@ -23,10 +27,13 @@ def main():
     # Add file to project
     file = handler.add_file(project.id, test_file)
     if file:
-        print(f"Added file: {file.filename}")
+        print(f"Added file: {file.name}")
         print(f"File size: {file.file_size} bytes")
     else:
         print("Failed to add file")
+
+    # for project in handler.get_projects():
+    #     print(project.name)
 
 
 if __name__ == "__main__":

@@ -28,6 +28,27 @@ tasks:
     cmds:
       - docker-compose up -d
 
+  db:wait:
+    desc: Wait for database to be ready
+    cmds:
+      - |
+        echo "Waiting for database to be ready..."
+        until docker-compose ps db | grep -q "Up"; do
+          echo "Database is starting..."
+          sleep 1
+        done
+        until docker-compose exec db pg_isready; do
+          echo "Database is not accepting connections yet..."
+          sleep 1
+        done
+        echo "Database is ready!"
+
+  db:init:
+    desc: Initialize database with vector extension
+    deps: [db:up, db:wait]
+    cmds:
+      - PGPASSWORD=postgres psql -h localhost -p 5434 -U postgres -d vectordb_ui -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
   db:down:
     desc: Stop the database
     cmds:
@@ -35,11 +56,13 @@ tasks:
 
   run:example:
     desc: Run the example script
+    deps: [db:init]
     cmds:
       - python src/example.py
 
   run:app:
     desc: Run the Streamlit application
+    deps: [db:init]
     cmds:
       - streamlit run src/app.py
 

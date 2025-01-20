@@ -1,14 +1,14 @@
 import streamlit as st
-from rag.chunking import LineChunker, WordChunker, SizeChunker, debug_chunker
-from rag.db import DBFileHandler
-from rag.model import File
-from rag.embeddings import OpenAIEmbedder
+from vector_rag.chunking import LineChunker, SizeChunker, debug_chunker
+from vector_rag.db import DBFileHandler
+from vector_rag.model import File
+from vector_rag.config import Config
+from vector_rag.embeddings import OpenAIEmbedder
 import tempfile
 import os
 import hashlib
 import logging
-from typing import Optional, List
-from dotenv import load_dotenv
+from typing import Optional
 
 # Configure logging
 logging.basicConfig(
@@ -17,47 +17,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Load environment variables
-load_dotenv()
-
 class ProjectManager:
     def __init__(self):
-        self.handler = self._init_handler()
+        config = Config()
+        print("CONFIG", config.as_dict())
+        self.handler = self._init_handler(config)
+        self.config = config
 
     @staticmethod
     @st.cache_resource
-    def _init_handler():
-
-        # CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', 25))
-        # CHUNK_OVERLAP = int(os.getenv('CHUNK_OVERLAP', 3))
-        #
-        CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', 255))
-        CHUNK_OVERLAP = int(os.getenv('CHUNK_OVERLAP', 25))
-        word_chunker = WordChunker(CHUNK_SIZE, CHUNK_OVERLAP)
-        line_chunker = LineChunker(CHUNK_SIZE, CHUNK_OVERLAP)
-
-        size_chunker = SizeChunker(CHUNK_SIZE, CHUNK_OVERLAP)
-
-        chunker = size_chunker
-
-        # Construct database URL using environment variables
-        db_url = f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DB')}"
-
-        # Debug information
-        logger.debug(f"Connecting to: {os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}")
-        logger.debug(f"CHUNK_SIZE: {CHUNK_SIZE} ChUNK_OVERLAP: {CHUNK_OVERLAP}")
-
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            api_key = st.secrets.get("OPENAI_API_KEY")
-            
-        if not api_key:
-            st.error("OpenAI API key not found. Please set OPENAI_API_KEY in your environment or Streamlit secrets.")
-            st.stop()
-            
-        # call db initializer which does not exist yet
-        # then run this return DBFileHandler(db_url=db_url, embedder=OpenAIEmbedder(api_key=api_key))
-        return DBFileHandler(embedder=OpenAIEmbedder(api_key=api_key), chunker=chunker)
+    def _init_handler(_config: Config):
+        return DBFileHandler(_config, chunker=SizeChunker(_config))
 
     def create_project(self, name: str, description: Optional[str] = None):
         if name:
@@ -81,12 +51,7 @@ class ProjectManager:
 
         CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', 255))
         CHUNK_OVERLAP = int(os.getenv('CHUNK_OVERLAP', 25))
-
-
-        size_chunker = SizeChunker(CHUNK_SIZE, CHUNK_OVERLAP)
-
-
-
+        size_chunker = SizeChunker(self.config)
         try:
             file = File(
                 name=uploaded_file.name,
